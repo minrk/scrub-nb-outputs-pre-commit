@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+#
+# Copyright 2013 Min RK, released under BSD license, etc., etc.
+#
+"""
+pre-commit script for scrubbing output from notebooks
+
+install 
+"""
+
+
+import io
+import shutil
+
+from subprocess import check_output
+
+from IPython.nbformat.current import read, write
+
+def get_changed_notebooks():
+    """Get the list of notebooks that have been added or changed"""
+    out = check_output(['git', 'status', '--porcelain'])
+    notebooks = []
+    for line in out.splitlines():
+        key, filename = line.split(None, 1)
+        if filename.endswith('.ipynb') and key in ('A', 'M'):
+            notebooks.append(filename)
+    return notebooks
+
+def clear_all_outputs(nb):
+    """This behaves the same as the 'clear all outputs' button"""
+    for ws in nb.worksheets:
+        for cell in ws.cells:
+            if cell.cell_type == 'code':
+                # clear prompts
+                cell.prompt_number = None
+                # clear outputs
+                cell.outputs = []
+
+def process_nb_file(process, filename):
+    """load a notebook, call a function on the notebook object,
+    and replace the original with the result.
+    """
+    # for safety, keep the original with the output
+    # until we trust that this script works
+    shutil.copy(filename, filename + '.out')
+    print "removing output from %s" % filename
+    
+    with io.open(filename, 'r', encoding='utf-8') as f:
+        nb = read(f, 'json')
+    
+    process(nb)
+    
+    with io.open(filename, 'w', encoding='utf-8') as f:
+        write(nb, f, 'json')
+
+if __name__ == '__main__':
+    for notebook in get_changed_notebooks():
+        process_nb_file(clear_all_outputs, notebook)
