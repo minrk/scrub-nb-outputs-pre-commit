@@ -5,7 +5,7 @@
 """
 pre-commit script for scrubbing output from notebooks
 
-install 
+install this in .git/hooks/pre-commit to avoid ever committing notebook outputs to your repo.
 """
 
 
